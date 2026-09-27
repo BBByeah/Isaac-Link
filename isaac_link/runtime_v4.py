@@ -1,3 +1,4 @@
+from isaac_link.version import __version__
 import threading
 import time
 from isaac_link.runtime import Runtime
@@ -7,7 +8,7 @@ from isaac_link.capture import Capture
 
 class MultiRuntime(Runtime):
     hook_name='hook_v4.js'
-    capture_version='0.4.3'
+    capture_version=__version__
 
     def __init__(self,log,config=None):
         super().__init__(log);self.control=Control(config);self.room={};self.enabled=False;self.control_failure='';self.carrier_status={}

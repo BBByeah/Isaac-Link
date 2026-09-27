@@ -1,3 +1,4 @@
+from isaac_link.version import __version__
 """Browser client runtime: room epochs, reconnectable lifecycle and slow telemetry."""
 import queue
 import threading
@@ -15,7 +16,7 @@ class ControlV5(Control):
 
 class RuntimeV5(MultiRuntime):
     hook_name='hook_v5.js'
-    capture_version='0.5.0'
+    capture_version=__version__
     def __init__(self,log,name,config=None):
         super().__init__(log,config);self.control=ControlV5(name,config)
         self.generation=None;self.session_lock=threading.RLock();self.telemetry={};self.code=''

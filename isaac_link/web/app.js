@@ -96,6 +96,7 @@ function monitor(){
  }));$('monitor-cards').innerHTML=cards.join('')||'<p class="muted small">添加一位队友后开始显示连接监视。</p>';
 }
 function render(){
+  document.getElementById("app-version").textContent=state.version || "";
  renderGuide();
  const theme=state.profile?.theme||"green";document.documentElement.dataset.theme=theme;$("theme").value=theme;$("theme").disabled=!!state.busy;
  const room=state.room||{},members=room.members||[],busy=!!state.busy,connected=!!state.self;

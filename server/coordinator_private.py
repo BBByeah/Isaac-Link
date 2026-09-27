@@ -1,5 +1,6 @@
 """Standalone invitation-protected coordinator and UDP relay."""
 import argparse
+from isaac_link.version import __version__
 import hmac
 from pathlib import Path
 from server.coordinator_v5 import CoordinatorV5
@@ -17,6 +18,7 @@ class PrivateCoordinator(CoordinatorV5):
 
 if __name__=='__main__':
     p=argparse.ArgumentParser()
+    p.add_argument("--version",action="version",version=__version__)
     p.add_argument('--cert',required=True);p.add_argument('--key',required=True);p.add_argument('--access-key-file',required=True)
     p.add_argument('--port',type=int,default=27668);p.add_argument('--udp-port',type=int,default=27667)
     a=p.parse_args();key=Path(a.access_key_file).read_text().strip()

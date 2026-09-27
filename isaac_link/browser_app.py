@@ -1,5 +1,6 @@
 """Portable loopback browser UI. No remote scripts, build tools or runtime install."""
 import argparse
+from isaac_link.version import __version__
 import collections
 import ctypes
 import http.client
@@ -71,7 +72,7 @@ class Backend:
         public={k:v for k,v in room.items() if k!='members'}
         public['members']=[{k:x.get(k) for k in ('steam','player_id','enabled')} for x in room.get('members',[])]
         with self.lock:
-            return dict(profile=self.profile,addresses=self.addresses,network=self.network,busy=self.busy,error=self.error,logs=list(self.logs),
+            return dict(version=__version__,profile=self.profile,addresses=self.addresses,network=self.network,busy=self.busy,error=self.error,logs=list(self.logs),
                         self=str(rt.transport.local.steam) if rt and rt.transport else '',code=rt.code if rt else '',
                         failure=rt.failure if rt else '',control_failure=rt.control_failure if rt else '',room=public,
                         capture=rt.capture.status() if rt else {})
@@ -200,7 +201,7 @@ def make_server(backend,port=0):
     return server,token
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--no-browser',action='store_true');parser.add_argument('--port',type=int,default=0);args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument("--version",action="version",version=__version__);parser.add_argument('--no-browser',action='store_true');parser.add_argument('--port',type=int,default=0);args=parser.parse_args()
     # The second launch opens the existing browser page instead of attaching
     # another hook to the same game. This handle lives until process exit.
     mutex=None
