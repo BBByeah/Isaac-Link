@@ -7,10 +7,12 @@ import threading
 import time
 from isaac_link.multipath import Multipath
 from isaac_link.transport import HEADER
+from isaac_link.input_window import InputWindow
 
 class TransportV5(Multipath):
     def __init__(self,*args,**kw):
         self.epoch=None;self.monitor_enabled=True;self.redundancy='off'
+        self.input_window=InputWindow()
         self.copies=[];self.copy_order=0;self.probe_times={};self.copy_budget={}
         self.copy_wake=threading.Event()
         super().__init__(*args,**kw)
@@ -23,7 +25,8 @@ class TransportV5(Multipath):
                 self.reset_session();self.epoch=epoch
             self.monitor_enabled=state.get('monitor',True)
             redundancy=state.get('redundancy','off')
-            if redundancy!=self.redundancy:self.copies.clear();self.redundancy=redundancy
+            if redundancy!=self.redundancy:
+                self.copies.clear();self.input_window.clear();self.redundancy=redundancy
             super().update(state)
 
     def reset_session(self):
@@ -31,9 +34,11 @@ class TransportV5(Multipath):
         # queues before deriving fresh keys; delayed old-room datagrams fail HMAC.
         for name in ('peers','keys','pings','last','rtt','errors','seq','expected','pending','assemblies','ready','seen',
                      'connected','reconnects','peer_stats','network_errors','next_retry','endpoint4','selected','path_last',
-                     'path_rtt','probes','samples','round_pending','round_results','probe_times','copy_budget'):
+                     'path_rtt','probes','samples','round_pending','round_results','probe_times','copy_budget',
+                     'advertised4','learned4','checks4','direct4_at','lan_endpoints'):
             getattr(self,name).clear()
         self.copies.clear();self.ever.clear();self.buffered=0;self.revision=-1;self.test_id=0
+        self.input_window.clear()
         while True:
             try:self.inbox.get_nowait()
             except queue.Empty:break
@@ -44,6 +49,9 @@ class TransportV5(Multipath):
             self.keys[peer.steam]=hashlib.sha256(self.keys[peer.steam]+b'room-v5:'+self.epoch.encode('ascii')).digest()
 
     def _wire(self,peer,data):
+        if self.redundancy=='window4':
+            sent=self.input_window.send(self,peer,data)
+            if sent is not None:return sent
         sent=super()._wire(peer,data)
         if not sent or self.redundancy not in ('copy5','copy10'):return sent
         if len(data)!=HEADER.size+16+40:return sent
@@ -71,6 +79,7 @@ class TransportV5(Multipath):
             with self.lock:self.maintenance(time.monotonic())
 
     def maintenance(self,now):
+        if self.redundancy=='window4':self.input_window.maintenance(self,now)
         for _ in range(32):
             if not self.copies or self.copies[0][0]>now:break
             due,_,peer,route,data=heapq.heappop(self.copies)
@@ -86,6 +95,9 @@ class TransportV5(Multipath):
         key=(peer,route)
         if now-self.probe_times.get(key,-10)<interval:return False
         self.probe_times[key]=now;return True
+
+    def receive_extra(self,peer,route,body):
+        return self.input_window.receive(self,peer,route,body)
 
     def probe_padding(self):return 0
 

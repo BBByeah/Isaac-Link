@@ -28,6 +28,12 @@ class BrowserApi(unittest.TestCase):
         self.assertEqual(self.request('/api/action','POST',{'action':'unknown'},h)[0],400)
         self.assertEqual(self.request('/../server.json')[0],404)
         self.assertEqual(self.request('/api/action','POST',{'action':'disconnect'},h)[0],202)
+    def test_server_code_autofill_requires_local_session(self):
+        self.backend.saved_server_code='test-invitation'
+        self.assertEqual(self.request('/api/server-code')[0],403)
+        status,body=self.request('/api/server-code',headers={'X-Isaac-Token':self.token})
+        self.assertEqual(status,200)
+        self.assertEqual(json.loads(body)['code'],'test-invitation')
     def test_profile_survives_restart(self):
         (Path(self.temp.name)/'profile.json').write_text('{"player_id":"WHEAT"}',encoding='utf-8')
         self.assertEqual(Backend(Path(self.temp.name)).state()['profile']['player_id'],'WHEAT')

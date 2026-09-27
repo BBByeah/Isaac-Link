@@ -20,6 +20,7 @@ from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from isaac_link.runtime_v5 import RuntimeV5
 from isaac_link.identity import player_id
 from isaac_link.server_code import decode_server_code
+from isaac_link.credential_store import ServerCredential
 from isaac_link.offline_runtime import OfflineRuntime
 
 ROOT=Path(sys.executable).parent if getattr(sys,'frozen',False) else Path(__file__).resolve().parent.parent
@@ -35,6 +36,12 @@ class Backend:
         self.addresses=[];self.network={'status':'checking'};self.lock=threading.RLock();self.shutdown=lambda:None
         (ROOT/'logs').mkdir(exist_ok=True)
         self.logfile=ROOT/'logs'/('v05-'+time.strftime('%Y%m%d-%H%M%S')+'.log')
+        self.credentials=ServerCredential(profile_folder);self.saved_server_code=''
+        try:
+            code=self.credentials.load()
+            if code:decode_server_code(code)
+            self.saved_server_code=code
+        except (OSError,ValueError):self.log('无法读取已保存的服务器码，请重新输入。')
 
     def discover(self):
         self.network={'status':'checking'}
@@ -70,12 +77,12 @@ class Backend:
         rt=self.runtime;room=rt.room if rt else {}
         # Peer cryptographic tokens never need to reach the browser.
         public={k:v for k,v in room.items() if k!='members'}
-        public['members']=[{k:x.get(k) for k in ('steam','player_id','enabled')} for x in room.get('members',[])]
+        public['members']=[{k:x.get(k) for k in ('steam','player_id','enabled','lan_ip')} for x in room.get('members',[])]
         with self.lock:
             return dict(version=__version__,profile=self.profile,addresses=self.addresses,network=self.network,busy=self.busy,error=self.error,logs=list(self.logs),
                         self=str(rt.transport.local.steam) if rt and rt.transport else '',code=rt.code if rt else '',
                         failure=rt.failure if rt else '',control_failure=rt.control_failure if rt else '',room=public,
-                        capture=rt.capture.status() if rt else {})
+                        capture=rt.capture.status() if rt else {},saved_server=bool(self.saved_server_code))
 
     def submit(self,data):
         with self.lock:
@@ -84,7 +91,7 @@ class Backend:
             titles={'connect':'正在连接游戏…','disconnect':'正在断开…','new-room':'正在新建组…','add':'正在转接队友…',
                     'test':'正在开始选路…','route':'正在应用线路…','settings':'正在同步设置…','kick':'正在移出成员…',
                     'capture':'正在处理抓包…','open-captures':'正在打开文件夹…','exit':'正在退出…','theme':'正在切换主题…',
-                    'guide':'正在保存设置…','network-check':'正在检测 IPv6…','network-settings':'正在打开网络设置…'}
+                    'guide':'正在保存设置…','network-check':'正在检测 IPv6…','network-settings':'正在打开网络设置…','lan':'正在保存局域网地址…'}
             if action not in titles:raise ValueError('未知操作')
             self.busy=titles[action];self.error=''
         def work():
@@ -118,6 +125,9 @@ class Backend:
             self.runtime=RuntimeV5(self.log,name,config) if config else OfflineRuntime(self.log,name)
             try:self.runtime.start(ip,27667)
             except Exception:self.runtime.close();self.runtime=None;raise
+            if code:
+                try:self.credentials.save(code);self.saved_server_code=code
+                except OSError:self.log('已连接，但服务器码未能保存；下次启动需重新输入。')
             self.log(name+' 已连接，可以复制连接码。');return
         if action in ('disconnect','exit'):
             if self.runtime:self.runtime.close();self.runtime=None
@@ -133,6 +143,7 @@ class Backend:
         elif action=='route':rt.set_route(d.get('a'),d.get('b'),d.get('route'))
         elif action=='settings':rt.settings(**{k:d[k] for k in ('monitor','redundancy') if k in d})
         elif action=='kick':rt.kick(d.get('steam'))
+        elif action=='lan':rt.set_lan(d.get('steam'),d.get('ip',''))
         elif action=='capture':
             if rt.capture.active:self.log('抓包已保存：'+str(rt.stop_capture()))
             else:self.log('开始抓包：'+rt.start_capture(ROOT/'captures'))
@@ -182,6 +193,7 @@ def make_server(backend,port=0):
                 finally:lifetime.closed(page)
                 return
             if self.path=='/api/state':self.respond(200,backend.state());return
+            if self.path=='/api/server-code':self.respond(200,{'code':backend.saved_server_code});return
             path={'/':'index.html','/style.css':'style.css','/app.js':'app.js'}.get(self.path)
             if not path:self.respond(404,{'error':'不存在'});return
             self.respond(200,(ASSETS/path).read_bytes(),{'index.html':'text/html; charset=utf-8','style.css':'text/css; charset=utf-8','app.js':'text/javascript; charset=utf-8'}[path])

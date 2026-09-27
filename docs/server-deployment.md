@@ -3,6 +3,8 @@
 需要 Linux、Python 3.10 或更新版本，以及 openssl。无第三方 Python 依赖。
 以下操作在你自己的服务器上执行，使用专用普通用户运行。
 
+升级到 0.6.5：在一局结束后停止旧服务，备份程序目录，用同版本服务端包覆盖程序文件，再按原启动命令启动。保留现有 server.crt、server.key、access.key 和连接码，无需重新生成。用 python3 -m server.coordinator_private --version 核对版本。旧客户端仍可相互组队；局域网功能需要全员使用 0.6.5，不能混入旧客户端。
+
 1. 把服务端压缩包解压到准备长期使用的目录，进入该目录。
 2. 生成证书、访问密钥和连接码：
    python3 -m server.server_setup --host 你的公网IPv4或域名

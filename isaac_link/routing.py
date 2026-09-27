@@ -2,8 +2,8 @@
 import itertools
 import math
 
-ROUTES = ('ipv6', 'ipv4', 'relay', 'steam')
-LABELS = dict(zip(ROUTES, ('IPv6 直连', 'IPv4 打洞', '服务器中转', 'Steam 原生')))
+ROUTES = ('ipv6', 'ipv4', 'relay', 'steam', 'lan')
+LABELS = dict(zip(ROUTES, ('IPv6 直连', 'IPv4 打洞', '服务器中转', 'Steam 原生', '局域网')))
 
 def edge(a, b):
     return ':'.join(sorted((str(a), str(b)), key=int))

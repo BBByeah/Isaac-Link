@@ -1,8 +1,10 @@
 """Version 5 room lifecycle; legacy clients continue using their existing rooms."""
 import argparse
 import re
+import ipaddress
 import secrets
 import time
+from isaac_link.version import __version__
 from server.coordinator_server import Coordinator,serve
 
 def player_id(value):
@@ -13,10 +15,13 @@ def player_id(value):
 class CoordinatorV5(Coordinator):
     def decorate_room(self,r):
         r.setdefault('epoch',secrets.token_hex(16));r.setdefault('monitor',True)
-        r.setdefault('redundancy','copy5');r.setdefault('telemetry',{})
+        modern=any(self.sessions[sid].get('protocol',4)>=6 for sid in r.get('members',{}).values())
+        r.setdefault('redundancy','window4' if modern else 'copy5');r.setdefault('telemetry',{})
+        r.setdefault('lan_ips',{})
 
     def reset_room(self,r):
         self.decorate_room(r)
+        r['lan_ips']={k:v for k,v in r['lan_ips'].items() if k in r.get('members',{})}
         r.update(epoch=secrets.token_hex(16),reports={},telemetry={},test=0,candidates=[],plan={},selection={},fixed={},error='',switch_at={})
         r['revision']+=1
         for sid in r['members'].values():self.sessions[sid]['enabled']=False
@@ -44,10 +49,34 @@ class CoordinatorV5(Coordinator):
                     raise ValueError('这个五字母 ID 正在使用，请选择另一个。')
                 result=super().handle(path,d);s=self.sessions[result['sid']]
                 s.update(protocol=protocol,player_id=name)
-                self.decorate_room(self.room(s));return result
+                self.decorate_room(self.room(s))
+                if protocol>=6:self.room(s)['redundancy']='window4'
+                result.update(server_version=__version__,max_protocol=7)
+                return result
             s=self.auth(d)
             if s.get('protocol',4)<5:return super().handle(path,d)
             r=self.room(s);self.decorate_room(r)
+            if path=='/lan':
+                if r['host']!=s['steam']:raise ValueError('只有主持人可以分配局域网地址。')
+                if any(self.sessions[sid].get('protocol',4)<7 for sid in r['members'].values()):raise ValueError('局域网线路需要全员更新到 0.6.5。')
+                peer=str(d.get('steam',''));value=str(d.get('ip','')).strip()
+                if peer not in r['members']:raise ValueError('成员不在当前队伍。')
+                if value:
+                    try:ip=ipaddress.IPv4Address(value)
+                    except ValueError:raise ValueError('请输入有效的 IPv4 地址。') from None
+                    if ip.is_loopback or ip.is_multicast or ip.is_unspecified or int(ip)>=0xf0000000:raise ValueError('请输入成员的实际局域网或 Radmin IPv4 地址。')
+                    value=str(ip)
+                    if any(k!=peer and v==value for k,v in r['lan_ips'].items()):raise ValueError('这个地址已分配给其他成员。')
+                if r['lan_ips'].get(peer,'')!=value:
+                    if r['test'] and not r['selection']:raise ValueError('请等待线路测试完成后再修改地址。')
+                    if value:r['lan_ips'][peer]=value
+                    else:
+                        if any(route=='lan' and peer in key.split(':') for key,route in r['plan'].items()):raise ValueError('请先将该成员的局域网线路切换到其他线路，再清空地址。')
+                        r['lan_ips'].pop(peer,None)
+                    r['reports']={};r['telemetry']={}
+                path='/poll';d={**d,'report':{},'enabled':s['enabled']}
+            if path=='/route' and d.get('route')=='lan':
+                if any(str(d.get(k,'')) not in r['lan_ips'] for k in ('a','b')):raise ValueError('请先给两位成员填写局域网地址。')
             if path=='/new-room':
                 self.fresh(s);r=self.room(s);path='/poll';d={**d,'report':{},'enabled':False}
             elif path=='/add':
@@ -56,6 +85,9 @@ class CoordinatorV5(Coordinator):
                 if not other or time.monotonic()-other['seen']>30:raise ValueError('连接码不存在或对方不在线。')
                 if other['steam'] in r['members']:raise ValueError('该玩家已在这个组中。')
                 if other.get('protocol',4)<5:raise ValueError('请对方更新到 0.5 后再加入新界面的队伍。')
+                if (other.get('protocol',4)>=7)!=(s.get('protocol',4)>=7):raise ValueError('请全员更新到 0.6.5 后组队。')
+                if (other.get('protocol',4)>=6)!=(s.get('protocol',4)>=6):
+                    raise ValueError('四帧冗余需要全员使用 0.6.4 或更新版本，请先统一客户端版本。')
                 if len(r['members'])>=4:raise ValueError('最多四人；请先移出一位玩家。')
                 self.detach(other);other['room']=s['room'];r['members'][other['steam']]=other['sid']
                 self.reset_room(r);path='/poll';d={**d,'report':{},'enabled':False}
@@ -70,7 +102,8 @@ class CoordinatorV5(Coordinator):
                     if type(d['monitor']) is not bool:raise ValueError('监视开关无效')
                     r['monitor']=d['monitor'];r['telemetry']={}
                 if 'redundancy' in d:
-                    if d['redundancy'] not in ('off','copy5','copy10'):raise ValueError('冗余档位无效')
+                    allowed=('off','copy5','copy10','window4') if s.get('protocol',4)>=6 else ('off','copy5','copy10')
+                    if d['redundancy'] not in allowed:raise ValueError('冗余档位无效')
                     r['redundancy']=d['redundancy']
                 path='/poll';d={**d,'report':{},'enabled':s['enabled']}
             elif path=='/test':
@@ -89,6 +122,7 @@ class CoordinatorV5(Coordinator):
             result.update(room=s['room'],epoch=r['epoch'],monitor=r['monitor'],redundancy=r['redundancy'])
             for member in result['members']:
                 member['player_id']=self.sessions[r['members'][member['steam']]].get('player_id')
+                member['lan_ip']=r['lan_ips'].get(member['steam'],'')
             result['telemetry']=dict(r['telemetry']) if r['host']==s['steam'] and r['monitor'] else {}
             if r['host']!=s['steam']:result['reports']={}
             return result

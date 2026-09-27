@@ -13,6 +13,34 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from isaac_link.routing import candidates, choose, ROUTES, edge
 
+class CoordinatorHTTPServer(ThreadingHTTPServer):
+    """Keep slow TLS handshakes off the accept loop, with bounded workers."""
+    daemon_threads=True
+    request_queue_size=64
+
+    def __init__(self,address,handler,context,connection_timeout=5,max_connections=64):
+        self.context=context;self.connection_timeout=connection_timeout
+        self.slots=threading.BoundedSemaphore(max_connections)
+        super().__init__(address,handler)
+
+    def process_request(self,request,address):
+        if not self.slots.acquire(blocking=False):
+            self.shutdown_request(request);return
+        try:super().process_request(request,address)
+        except Exception:
+            self.slots.release();raise
+
+    def process_request_thread(self,request,address):
+        try:
+            request.settimeout(self.connection_timeout)
+            request=self.context.wrap_socket(request,server_side=True,do_handshake_on_connect=False)
+            request.do_handshake()
+            self.finish_request(request,address)
+        except (OSError,ssl.SSLError):pass
+        except Exception:self.handle_error(request,address)
+        finally:
+            self.shutdown_request(request);self.slots.release()
+
 class Coordinator:
     def __init__(self):
         self.lock=threading.RLock();self.sessions={};self.codes={};self.rooms={}
@@ -165,8 +193,8 @@ def serve(cert,key,host='0.0.0.0',port=27668,udp_port=27667,state_factory=Coordi
                 data=json.dumps(result,separators=(',',':')).encode();code=200
             except Exception as e:data=json.dumps({'error':str(e)},ensure_ascii=False).encode();code=400
             self.send_response(code);self.send_header('Content-Type','application/json; charset=utf-8');self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data)
-    server=ThreadingHTTPServer((host,port),Handler);server.daemon_threads=True
-    ctx=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER);ctx.minimum_version=ssl.TLSVersion.TLSv1_2;ctx.load_cert_chain(cert,key);server.socket=ctx.wrap_socket(server.socket,server_side=True)
+    ctx=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER);ctx.minimum_version=ssl.TLSVersion.TLSv1_2;ctx.load_cert_chain(cert,key)
+    server=CoordinatorHTTPServer((host,port),Handler,ctx)
     udp=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);udp.bind((host,udp_port));udp.settimeout(1)
     def loop():
         while True:

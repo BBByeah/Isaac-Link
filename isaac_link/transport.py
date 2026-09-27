@@ -11,6 +11,7 @@ import socket
 import struct
 import threading
 import time
+from isaac_link.network_priority import NetworkPriority, prioritize_thread
 
 HEADER=struct.Struct('!4sBQiBQHH')
 PING,PONG,DATA,ACK=1,2,3,4
@@ -72,6 +73,7 @@ class Transport:
         except Exception: self.sock.close(); raise
         self.local=Peer(int(steam),address(ip,test) if ip else '',self.sock.getsockname()[1],secrets.token_bytes(16))
         self.thread=threading.Thread(target=self._run,daemon=True)
+        if start_thread:self.priority=NetworkPriority(self.event)
         if start_thread:self.thread.start()
 
     def add(self,peer):
@@ -98,6 +100,7 @@ class Transport:
         if self.native(peer):return False
         p=self.peers[peer]
         try:
+            self.priority.request(self.sock,(p.ip,p.port))
             self.sock.sendto(data,(p.ip,p.port))
             self.stats['udp_out']+=1
             return True
@@ -191,6 +194,7 @@ class Transport:
                 for p in self.peers}}
 
     def _run(self):
+        prioritize_thread(self.event)
         next_ping=0
         while not self.stop.is_set():
             try:
@@ -261,3 +265,4 @@ class Transport:
 
     def close(self):
         self.stop.set(); self.sock.close(); self.thread.join(timeout=2)
+        self.priority.close()

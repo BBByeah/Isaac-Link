@@ -4,6 +4,8 @@
 server.json
 access.key
 server-connection-code.txt
+*.dpapi
+*.dpapi.tmp
 *.key
 *.pem
 *.crt

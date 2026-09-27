@@ -10,6 +10,7 @@ import threading
 import time
 from isaac_link.transport import Transport, Peer
 from isaac_link.routing import ROUTES, edge, percentile
+from isaac_link.network_priority import NetworkPriority, prioritize_thread
 
 WIRE=struct.Struct('!4sQQB')
 
@@ -28,13 +29,16 @@ class Multipath(Transport):
         except Exception:
             for s in self.sockets:s.close()
             raise
-        self.endpoint4={};self.selected={};self.path_last={};self.path_rtt={}
+        self.endpoint4={};self.advertised4={};self.learned4={};self.checks4={};self.direct4_at={}
+        self.lan_endpoints={}
+        self.selected={};self.path_last={};self.path_rtt={}
         self.probes={};self.samples=collections.defaultdict(lambda:collections.deque(maxlen=600))
         self.round_pending={};self.round_results=collections.defaultdict(list)
         self.state={};self.test_id=0;self.state_at=0;self.revision=-1;self.inbox=queue.Queue(2048)
         self.relay=(socket.gethostbyname(control.config['host']),control.config.get('udp_port',27667))
         self.sid=bytes.fromhex(control.credentials['sid']);self.auth=bytes.fromhex(control.credentials['auth'])
         self.last_error='';self.enabled=False;self.receive_route=None
+        self.priority=NetworkPriority(self.event)
         self.thread=threading.Thread(target=self._run,daemon=True);self.thread.start()
 
     @staticmethod
@@ -62,6 +66,7 @@ class Multipath(Transport):
 
     def udp_send(self,sock,raw,target,route,peer=None):
         try:
+            self.priority.request(sock,target)
             n=sock.sendto(raw,target)
             self.record('udp_send',raw,route=route,peer=str(peer) if peer is not None else None,endpoint=list(target),success=True,sent_bytes=n)
             return n
@@ -76,12 +81,26 @@ class Multipath(Transport):
         with self.lock:
             if self.test_id!=state['test']:
                 self.samples.clear();self.probes.clear();self.round_results.clear();self.round_pending.clear()
-                self.test_id=state['test'];self.event('正在测试四种线路，约 30 秒。' if self.test_id else '成员名单已同步。')
+                self.test_id=state['test'];self.event('正在测试可用线路，约 30 秒。' if self.test_id else '成员名单已同步。')
+            own=next((x for x in state['members'] if int(x['steam'])==self.local.steam),{})
+            lan={int(x['steam']):(x['lan_ip'],x['port']) for x in state['members'] if x.get('lan_ip') and int(x['steam'])!=self.local.steam} if own.get('lan_ip') else {}
+            for peer in set(self.lan_endpoints)|set(lan):
+                if self.lan_endpoints.get(peer)!=lan.get(peer):
+                    self.samples.pop((peer,'lan'),None);self.path_last.pop((peer,'lan'),None);self.path_rtt.pop((peer,'lan'),None)
+                    for key in list(self.probes):
+                        if key[:2]==(peer,'lan'):self.probes.pop(key,None)
+            self.lan_endpoints=lan
             for item in state['members']:
                 peer=int(item['steam'])
                 if peer==self.local.steam:continue
                 self.add(Peer(peer,item['ipv6'],item['port'],bytes.fromhex(item['token'])))
-                if item['endpoint']:self.endpoint4[peer]=tuple(item['endpoint'])
+                advertised=tuple(item['endpoint']) if item['endpoint'] else None
+                self.advertised4[peer]=advertised
+                learned=self.learned4.get(peer)
+                if learned and time.monotonic()-self.direct4_at.get(peer,0)<10:
+                    self.endpoint4[peer]=learned
+                elif advertised:self.endpoint4[peer]=advertised
+                else:self.endpoint4.pop(peer,None)
             self.state=state;self.state_at=time.monotonic()
             if state['revision']!=self.revision:
                 previous=self.selected
@@ -98,7 +117,10 @@ class Multipath(Transport):
         header=magic+self.sid
         return header+hmac.digest(self.auth,header+payload,'sha256')+payload
 
-    def emit(self,peer,route,body):
+    def emit(self,peer,route,body,endpoint4=None):
+        return self._emit(peer,route,body,endpoint4)
+
+    def _emit(self,peer,route,body,endpoint4=None):
         if peer not in self.keys:return False
         raw=WIRE.pack(b'I6W2',self.local.steam,peer,ROUTES.index(route))+body
         raw+=hmac.digest(self.keys[peer],raw,'sha256')[:16]
@@ -106,9 +128,14 @@ class Multipath(Transport):
             if route=='steam':
                 ok=self.carrier_send(peer,raw);self.record('steam_enqueue',raw,peer=str(peer),success=bool(ok));return ok
             if route=='relay':self.udp_send(self.sock4,self.relay_packet(b'I6R2',struct.pack('!Q',peer)+raw),self.relay,route,peer)
+            elif route=='lan':
+                target=self.lan_endpoints.get(peer)
+                if not target:return False
+                self.udp_send(self.sock4,raw,target,route,peer)
             elif route=='ipv4':
-                if peer not in self.endpoint4:return False
-                self.udp_send(self.sock4,raw,self.endpoint4[peer],route,peer)
+                target=endpoint4 or self.endpoint4.get(peer)
+                if not target:return False
+                self.udp_send(self.sock4,raw,target,route,peer)
             else:
                 p=self.peers[peer]
                 if not self.sock6 or not p.ip:return False
@@ -130,7 +157,7 @@ class Multipath(Transport):
     def receive_wire(self,raw,source=None,steam=None):
         if not WIRE.size+17<=len(raw)<=1450:return
         magic,peer,target,rid=WIRE.unpack_from(raw)
-        if magic!=b'I6W2' or target!=self.local.steam or peer not in self.keys or rid>=4:return
+        if magic!=b'I6W2' or target!=self.local.steam or peer not in self.keys or rid>=len(ROUTES):return
         route=ROUTES[rid]
         if steam is not None:
             if peer!=steam or route!='steam':return
@@ -138,13 +165,36 @@ class Multipath(Transport):
         elif route=='relay' and source[:2]!=self.relay:return
         elif route=='ipv6' and ':' not in source[0]:return
         elif route=='ipv4' and ':' in source[0]:return
+        elif route=='lan' and tuple(source[:2])!=self.lan_endpoints.get(peer):return
         if not hmac.compare_digest(raw[-16:],hmac.digest(self.keys[peer],raw[:-16],'sha256')[:16]):
             self.stats['rejected']+=1;return
         body=raw[WIRE.size:-16];now=time.monotonic();kind=body[:1]
         self.stats['steam_in' if steam is not None else 'udp_in']+=1
+        if route=='ipv4':
+            source=tuple(source[:2])
+            pending=self.checks4.get(peer)
+            if kind==b'!' and len(body)==9 and pending and pending[0]==body[1:] and pending[1]==source and now-pending[2]<3:
+                self.learned4[peer]=source;self.endpoint4[peer]=source;self.direct4_at[peer]=now
+                del self.checks4[peer]
+                rtt=(now-pending[2])*1000
+                self.path_last[peer,route]=now;self.path_rtt[peer,route]=rtt
+                self.samples[peer,route].append(rtt)
+                self.stats['ipv4_endpoint_validated']+=1
+                self.record('ipv4_endpoint_validated',peer=str(peer),endpoint=list(source))
+                return
+            if source==self.learned4.get(peer):self.direct4_at[peer]=now
+            elif not pending or now-pending[2]>=1:
+                # A fresh challenge proves the observed source can receive.
+                # HMAC alone is insufficient: a captured signed packet can be replayed.
+                nonce=secrets.token_bytes(8);self.checks4[peer]=(nonce,source,now)
+                self._emit(peer,'ipv4',b'?'+nonce,endpoint4=source)
+        if self.receive_extra(peer,route,body):return
         if kind in (b'?',b'Q'):
             if len(body)<9:return
-            self.emit(peer,route,(b'!' if kind==b'?' else b'A')+body[1:9]);return
+            reply=(b'!' if kind==b'?' else b'A')+body[1:9]
+            if route=='ipv4':self._emit(peer,route,reply,endpoint4=source)
+            else:self.emit(peer,route,reply)
+            return
         if kind==b'!' and len(body)==9:
             seq=struct.unpack('!Q',body[1:])[0];start=self.probes.pop((peer,route,seq),None)
             if start is not None:
@@ -159,9 +209,12 @@ class Multipath(Transport):
                 if not record[2]:self.round_results[record[0]].append((now-record[1])*1000);del self.round_pending[seq]
             return
         if kind==b'D':
+            self.path_last[peer,route]=now
             # The end-to-end envelope was authenticated. Reuse the reliable
             # decoder with its expected logical source, independent of carrier.
             p=self.peers[peer];super()._receive(body[1:],(p.ip,p.port),count_wire=False)
+
+    def receive_extra(self,peer,route,body):return False
 
     def report(self):
         with self.lock:
@@ -183,6 +236,7 @@ class Multipath(Transport):
             return snap
 
     def _run(self):
+        prioritize_thread(self.event)
         heartbeat=probeat=roundat=0
         while not self.stop.is_set():
             try:
@@ -252,4 +306,5 @@ class Multipath(Transport):
 
     def close(self):
         self.stop.set();self.thread.join(2)
+        self.priority.close()
         for s in self.sockets:s.close()

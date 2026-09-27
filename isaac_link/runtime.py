@@ -1,6 +1,7 @@
 from pathlib import Path
 import queue,time,threading
 import frida
+from isaac_link.network_priority import prioritize_thread
 from isaac_link.transport import Transport
 
 class Runtime:
@@ -48,6 +49,7 @@ class Runtime:
         self.worker=threading.Thread(target=self.run,daemon=True);self.worker.start()
         return self.transport.local.code()
     def run(self):
+        prioritize_thread(self.log)
         next_state=0
         while not self.stop_event.is_set():
             try:

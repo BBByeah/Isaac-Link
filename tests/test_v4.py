@@ -48,6 +48,7 @@ class Network:
         while not self.stop.is_set():
             for n in list(self.nodes.values()):
                 state=n.control.call('/poll',report=n.report(),test=n.test_id,enabled=n.enabled)
+                for member in state['members']:member['lan_ip']='127.0.0.1'
                 n.update(state)
             self.stop.wait(.05)
     def close(self):
@@ -94,9 +95,9 @@ class Tests(unittest.TestCase):
             a.send(101,9,2,b'queued-before-switch')
             a.send(101,9,2,b'queued-second')
             time.sleep(.1);a.selected[101]='ipv4';b.selected[100]='ipv4'
-            until(lambda:len(n.received[101])==18)
+            until(lambda:len(n.received[101])==4*len(ROUTES)+2)
             self.assertEqual([x[2] for x in n.received[101][-2:]],[b'queued-before-switch',b'queued-second'])
-            time.sleep(.3);self.assertEqual(len(n.received[101]),18)
+            time.sleep(.3);self.assertEqual(len(n.received[101]),4*len(ROUTES)+2)
             self.assertFalse(a.errors)
         finally:n.close()
 

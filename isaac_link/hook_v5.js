@@ -132,7 +132,7 @@ function messages(){recv('control',function(m,data){const p=m.payload;
    // Transport data must never wait inside Steam's connection buffer. Control
    // probes retain Unreliable so they can establish a not-yet-ready P2P session.
    const raw=new Uint8Array(data);
-   const mode=raw.length>21&&raw[0]===73&&raw[1]===54&&raw[2]===87&&raw[3]===50&&raw[21]===68?1:0;
+   const mode=raw.length>21&&raw[0]===73&&raw[1]===54&&raw[2]===87&&raw[3]===50&&(raw[21]===68||raw[21]===66)?1:0;
    const ok=carrierSend(instance,new UInt64(p.peer),buf,data.byteLength,mode,CARRIER_CHANNEL);
   if(!ok)carrierErrors++;
    if(captureEnabled)send({type:'carrier_sent',peer:p.peer,success:!!ok,mode:mode,wall_ms:Date.now()},data);

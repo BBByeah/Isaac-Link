@@ -1,6 +1,7 @@
 from isaac_link.version import __version__
 """Browser client runtime: room epochs, reconnectable lifecycle and slow telemetry."""
 import queue
+from isaac_link.network_priority import prioritize_thread
 import threading
 import time
 from isaac_link.control import Control
@@ -11,8 +12,13 @@ from isaac_link.identity import player_id
 class ControlV5(Control):
     def __init__(self,name,config=None):super().__init__(config);self.name=player_id(name)
     def register(self,steam,ipv6,port,token):
-        r=self.call('/register',steam=str(steam),ipv6=ipv6,port=port,token=token.hex(),protocol=5,player_id=self.name)
-        self.credentials={k:r[k] for k in ('sid','auth')};return r['code']
+        r=self.call('/register',steam=str(steam),ipv6=ipv6,port=port,token=token.hex(),protocol=7,player_id=self.name)
+        self.credentials={k:r[k] for k in ('sid','auth')}
+        if r.get('max_protocol',5)<7:
+            try:self.call('/leave')
+            finally:self.credentials={}
+            raise ValueError('请先将协调服务端更新至 0.6.5 或更新版本。')
+        return r['code']
 
 class RuntimeV5(MultiRuntime):
     hook_name='hook_v5.js'
@@ -39,6 +45,7 @@ class RuntimeV5(MultiRuntime):
         super().post({**p,'generation':self.generation or ''},data)
 
     def run(self):
+        prioritize_thread(self.log)
         next_state=0
         while not self.stop_event.is_set():
             try:
@@ -100,3 +107,4 @@ class RuntimeV5(MultiRuntime):
     def new_room(self):return self.control.call('/new-room')
     def settings(self,**data):return self.control.call('/settings',**data)
     def kick(self,steam):return self.control.call('/kick',steam=steam)
+    def set_lan(self,steam,ip):return self.control.call('/lan',steam=steam,ip=ip)
