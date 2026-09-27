@@ -2,10 +2,10 @@
 import queue
 import threading
 import time
-from control import Control
-from runtime_v4 import MultiRuntime
-from transport_v5 import TransportV5
-from identity import player_id
+from isaac_link.control import Control
+from isaac_link.runtime_v4 import MultiRuntime
+from isaac_link.transport_v5 import TransportV5
+from isaac_link.identity import player_id
 
 class ControlV5(Control):
     def __init__(self,name,config=None):super().__init__(config);self.name=player_id(name)

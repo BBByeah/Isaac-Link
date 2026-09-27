@@ -2,9 +2,9 @@ import time
 import unittest
 from unittest.mock import patch
 import test_v4
-from coordinator_v5 import CoordinatorV5
-from transport_v5 import TransportV5
-from transport import HEADER
+from server.coordinator_v5 import CoordinatorV5
+from isaac_link.transport_v5 import TransportV5
+from isaac_link.transport import HEADER
 
 class ControlV5(test_v4.LocalControl):
     def register(self,steam,ipv6,port,token):
@@ -17,7 +17,7 @@ class ControlV5(test_v4.LocalControl):
 class TransportTests(unittest.TestCase):
     def test_count_outer_packet_once_and_separate_steam(self):
         import hmac
-        from multipath import WIRE
+        from isaac_link.multipath import WIRE
         with self.b.lock:
             inner=self.a._packet(101,3,channel=0,mode=1,seq=900,payload=b'x'*40)
             raw=WIRE.pack(b'I6W2',100,101,0)+b'D'+inner

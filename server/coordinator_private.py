@@ -2,8 +2,8 @@
 import argparse
 import hmac
 from pathlib import Path
-from coordinator_v5 import CoordinatorV5
-from coordinator_server import serve
+from server.coordinator_v5 import CoordinatorV5
+from server.coordinator_server import serve
 
 class PrivateCoordinator(CoordinatorV5):
     def __init__(self,access_key):

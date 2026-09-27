@@ -6,7 +6,7 @@ from pathlib import Path
 import secrets
 import ssl
 import subprocess
-from server_code import encode_server_code
+from isaac_link.server_code import encode_server_code
 
 def main():
     p=argparse.ArgumentParser(description='Generate a private Isaac server invitation')

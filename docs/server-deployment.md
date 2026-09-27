@@ -5,10 +5,10 @@
 
 1. 把服务端压缩包解压到准备长期使用的目录，进入该目录。
 2. 生成证书、访问密钥和连接码：
-   python3 server_setup.py --host 你的公网IPv4或域名
+   python3 -m server.server_setup --host 你的公网IPv4或域名
 3. 在云安全组和系统防火墙放行 TCP 27668、UDP 27667。
 4. 启动服务：
-   python3 coordinator_private.py --cert server.crt --key server.key --access-key-file access.key
+   python3 -m server.coordinator_private --cert server.crt --key server.key --access-key-file access.key
 5. 将 server-connection-code.txt 的内容单独发给允许使用服务器的玩家。
    同一队伍需要使用同一个服务器连接码。
 

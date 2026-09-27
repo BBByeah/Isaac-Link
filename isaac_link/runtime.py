@@ -1,7 +1,7 @@
 from pathlib import Path
 import queue,time,threading
 import frida
-from transport import Transport
+from isaac_link.transport import Transport
 
 class Runtime:
     hook_name='hook.js'

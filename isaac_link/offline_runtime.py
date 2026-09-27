@@ -1,10 +1,10 @@
 """Server-free manual peer exchange, using the original IPv6/native Steam path."""
 import threading
 from types import SimpleNamespace
-from runtime import Runtime
-from transport import Peer
-from capture import Capture
-from routing import edge
+from isaac_link.runtime import Runtime
+from isaac_link.transport import Peer
+from isaac_link.capture import Capture
+from isaac_link.routing import edge
 
 class OfflineRuntime(Runtime):
     def __init__(self,log,name):

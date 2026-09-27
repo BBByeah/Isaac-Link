@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 import threading
 import unittest
-from browser_app import Backend,make_server
+from isaac_link.browser_app import Backend,make_server
 
 class BrowserApi(unittest.TestCase):
     def setUp(self):

@@ -3,7 +3,7 @@ import argparse
 import re
 import secrets
 import time
-from coordinator_server import Coordinator,serve
+from server.coordinator_server import Coordinator,serve
 
 def player_id(value):
     value=str(value).strip().upper()

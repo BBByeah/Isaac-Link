@@ -5,9 +5,9 @@ import tempfile
 import threading
 import time
 import unittest
-from capture import Capture
+from isaac_link.capture import Capture
 from test_v4 import Network,until
-from routing import ROUTES
+from isaac_link.routing import ROUTES
 
 def rows(path):return [json.loads(x) for x in Path(path).read_text(encoding='utf-8').splitlines()]
 
@@ -35,7 +35,7 @@ class Tests(unittest.TestCase):
             c=Capture();c.start(d);c.file.close();c.record('test',b'abc')
             until(lambda:bool(c.status()['error']))
             with self.assertRaises(RuntimeError):c.stop()
-            from runtime_v4 import MultiRuntime
+            from isaac_link.runtime_v4 import MultiRuntime
             r=MultiRuntime(lambda x:None);r.start_capture(d)
             class DeadScript:
                 def post(self,*args):raise RuntimeError('game has exited')

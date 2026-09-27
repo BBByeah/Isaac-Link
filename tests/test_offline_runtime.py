@@ -1,8 +1,8 @@
 import time
 import unittest
 from unittest.mock import patch
-from offline_runtime import OfflineRuntime
-from transport import Transport
+from isaac_link.offline_runtime import OfflineRuntime
+from isaac_link.transport import Transport
 
 class Script:
     def __init__(self):self.exports_sync=self;self.installed=False
@@ -19,7 +19,7 @@ class OfflineTests(unittest.TestCase):
         rt=OfflineRuntime(lambda x:None,'WHEAT');rt.script=Script()
         def local(steam,ip,port,callback,**kw):return Transport(steam,ip,port,callback,test=True,**kw)
         try:
-            with patch('runtime.Transport',local):rt.start('::1',0)
+            with patch('isaac_link.runtime.Transport',local):rt.start('::1',0)
             rt.transport.add(other.local);other.add(rt.transport.local)
             deadline=time.monotonic()+3
             while time.monotonic()<deadline and not rt.transport.active(2):time.sleep(.05)

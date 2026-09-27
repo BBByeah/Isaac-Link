@@ -1,9 +1,9 @@
 import threading
 import time
-from runtime import Runtime
-from control import Control
-from multipath import Multipath
-from capture import Capture
+from isaac_link.runtime import Runtime
+from isaac_link.control import Control
+from isaac_link.multipath import Multipath
+from isaac_link.capture import Capture
 
 class MultiRuntime(Runtime):
     hook_name='hook_v4.js'

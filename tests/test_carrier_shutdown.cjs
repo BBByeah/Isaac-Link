@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
-const source=fs.readFileSync('hook_v5.js','utf8');
+const source=fs.readFileSync('isaac_link/hook_v5.js','utf8');
 const lifecycle=source.slice(source.indexOf('let carrierPeers='),source.indexOf('const carrierTable='));
 const poll=source.slice(source.indexOf('function pollCarrier(){'),source.indexOf('function active('));
 function fixture(fault){

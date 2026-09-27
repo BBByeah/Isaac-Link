@@ -8,8 +8,8 @@ import socket
 import struct
 import threading
 import time
-from transport import Transport, Peer
-from routing import ROUTES, edge, percentile
+from isaac_link.transport import Transport, Peer
+from isaac_link.routing import ROUTES, edge, percentile
 
 WIRE=struct.Struct('!4sQQB')
 

@@ -1,6 +1,6 @@
 import unittest
-from server_code import encode_server_code,decode_server_code
-from coordinator_private import PrivateCoordinator
+from isaac_link.server_code import encode_server_code,decode_server_code
+from server.coordinator_private import PrivateCoordinator
 
 class InvitationTests(unittest.TestCase):
     def test_roundtrip_and_rejection(self):

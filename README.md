@@ -45,7 +45,7 @@
 ```powershell
 py -3.13 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe browser_app.py
+.\.venv\Scripts\python.exe -m isaac_link.browser_app
 ```
 
 游戏需要已启动；网页会自动打开。玩家 ID、主题和提示设置保存在当前 Windows 用户的 `LocalAppData\IsaacLink\profile.json`。
@@ -53,9 +53,9 @@ py -3.13 -m venv .venv
 ## 构建 Windows 程序
 
 ```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements-build.txt
-.\.venv\Scripts\python.exe -m PyInstaller --noconfirm Isaac-Link.spec
-.\.venv\Scripts\python.exe package_release.py
+.\.venv\Scripts\python.exe -m pip install -r scripts/requirements-build.txt
+.\.venv\Scripts\python.exe -m PyInstaller --noconfirm scripts/Isaac-Link.spec
+.\.venv\Scripts\python.exe scripts/package_release.py
 ```
 
 在 `release/` 下生成客户端 ZIP 和独立服务端 ZIP。打包脚本使用明确的文件清单，不包含本地日志、抓包或服务器密钥。
@@ -67,7 +67,7 @@ py -3.13 -m venv .venv
 
 详细步骤见 [服务端部署](docs/server-deployment.md)。首次部署在服务器上生成自己的证书、私钥、访问密钥和连接码；这些文件不能提交到 Git。
 
-只运行 `coordinator_private.py` 作为公开服务入口；`coordinator_server.py` 和 `coordinator_v5.py` 是其内部实现，单独运行不会强制验证服务器连接码。
+只运行 `server/coordinator_private.py` 作为公开服务入口；`server/coordinator_server.py` 和 `server/coordinator_v5.py` 是其内部实现，单独运行不会强制验证服务器连接码。
 
 ## 测试
 
@@ -80,18 +80,17 @@ Python 测试使用本机模拟客户端、IPv4/IPv6 回环和临时文件；第
 
 ## 项目结构
 
-| 文件 | 用途 |
+| 目录 | 内容 |
 | --- | --- |
-| `browser_app.py`、`web/` | 本机网页与操作接口 |
-| `runtime*.py`、`hook*.js` | 游戏接口及生命周期 |
-| `transport*.py`、`multipath.py` | 数据传输与输入冗余 |
-| `offline_runtime.py` | 无服务器模式 |
-| `coordinator_private.py`、`coordinator*.py` | 连接码校验、组队和中转 |
-| `server_setup.py`、`server_code.py` | 生成和解析服务器连接码 |
-| `capture.py`、`tests/` | 抓包与测试 |
+| `isaac_link/` | 客户端、传输逻辑、游戏接口和网页 |
+| `server/` | 独立组队协调与中转服务 |
+| `scripts/` | Windows 构建和发布打包 |
+| `tests/` | 本机回归测试 |
+| `docs/` | 服务端部署说明 |
+| `licenses/` | 第三方许可声明 |
 
 日志和抓包可能包含玩家标识、网络地址及游戏数据。反馈问题前请检查内容，不要直接提交完整运行目录。
 
 ## 许可证
 
-[MIT](LICENSE)。第三方依赖见 [许可说明](THIRD_PARTY_NOTICES.md)。
+[MIT](LICENSE)。第三方依赖见 [许可说明](licenses/THIRD_PARTY_NOTICES.md)。

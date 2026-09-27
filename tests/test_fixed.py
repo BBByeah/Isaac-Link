@@ -1,7 +1,7 @@
 import time
 import unittest
 from test_v4 import Network,until
-from routing import ROUTES,candidates,edge
+from isaac_link.routing import ROUTES,candidates,edge
 
 class Tests(unittest.TestCase):
     def test_manual_full_mesh_lock_and_unlock(self):

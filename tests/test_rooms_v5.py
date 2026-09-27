@@ -1,5 +1,5 @@
 import unittest
-from coordinator_v5 import CoordinatorV5
+from server.coordinator_v5 import CoordinatorV5
 
 class Rooms(unittest.TestCase):
     def setUp(self):self.server=CoordinatorV5();self.users={}

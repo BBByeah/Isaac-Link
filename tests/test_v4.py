@@ -4,9 +4,9 @@ import socket
 import threading
 import time
 import unittest
-from coordinator_server import Coordinator
-from multipath import Multipath
-from routing import candidates,choose,edge,ROUTES
+from server.coordinator_server import Coordinator
+from isaac_link.multipath import Multipath
+from isaac_link.routing import candidates,choose,edge,ROUTES
 
 def until(fn,timeout=8):
     end=time.monotonic()+timeout

@@ -16,12 +16,12 @@ import threading
 import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
-from runtime_v5 import RuntimeV5
-from identity import player_id
-from server_code import decode_server_code
-from offline_runtime import OfflineRuntime
+from isaac_link.runtime_v5 import RuntimeV5
+from isaac_link.identity import player_id
+from isaac_link.server_code import decode_server_code
+from isaac_link.offline_runtime import OfflineRuntime
 
-ROOT=Path(sys.executable).parent if getattr(sys,'frozen',False) else Path(__file__).parent
+ROOT=Path(sys.executable).parent if getattr(sys,'frozen',False) else Path(__file__).resolve().parent.parent
 ASSETS=Path(__file__).parent/'web'
 PROFILE=Path(os.environ.get('LOCALAPPDATA',str(ROOT)))/'IsaacLink'
 

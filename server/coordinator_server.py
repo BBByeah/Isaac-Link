@@ -11,7 +11,7 @@ import struct
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from routing import candidates, choose, ROUTES, edge
+from isaac_link.routing import candidates, choose, ROUTES, edge
 
 class Coordinator:
     def __init__(self):
