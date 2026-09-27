@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>以撒联机助手</title><link rel="stylesheet" href="/style.css"></head>
+<body><div class="shell">
+<header><strong>以撒联机助手 <small>0.6.2</small></strong><span id="connection" class="pill">尚未连接游戏</span><div class="header-right"><label for="theme">主题</label><select id="theme" aria-label="颜色主题"><option value="green">墨绿</option><option value="wine">黑＋酒红</option><option value="gold">黑金</option><option value="purple">黑＋紫</option></select><button id="disconnect" hidden>断开</button><button id="show-guide">使用说明</button><button id="show-log">日志</button><button id="exit">退出助手</button></div></header>
+<section class="controls"><label for="name">玩家 ID</label><input id="name" placeholder="五个字母" maxlength="5" autocomplete="off" spellcheck="false"><button id="connect" class="primary">连接游戏</button><label for="address">IPv6</label><select id="address"><option value="">自动选择</option></select><label for="redundancy">输入副本</label><select id="redundancy" title="原包立即发送，再补发一份副本。上行拥堵时可关闭。"><option value="off">关闭</option><option value="copy5">5 ms</option><option value="copy10">10 ms</option></select></section>
+<section class="server-bar"><label for="server-code">服务器码</label><input id="server-code" type="password" autocomplete="off" placeholder="可选：填入后启用服务器组队、IPv4 打洞与中转"></section>
+<div id="error" role="alert" hidden></div>
+<section class="room-bar panel"><label>连接码</label><span id="own-code">连接游戏后生成</span><button id="copy" disabled>复制</button><input id="join-code" placeholder="粘贴队友连接码" autocomplete="off"><button id="add">加入本组</button><button id="new-room" title="回到官方大厅后换组；可用队友原连接码直接转接。">新建组</button></section>
+<main><section class="topology panel"><div class="section-head"><h2>连接图 <span id="member-count">0 / 4</span></h2><span id="session-status">先连接游戏</span><button id="test" class="primary">自动测试</button></div><div class="graph-wrap"><svg id="graph" viewBox="100 15 560 390" role="img" aria-label="全队连接图"></svg><div id="empty-graph">连接游戏后添加队友</div><div id="route-menu" class="route-menu" hidden></div></div><div id="players"></div><footer class="graph-footer"><div class="legend"><span><i class="ipv6"></i>IPv6</span><span><i class="ipv4"></i>IPv4</span><span><i class="relay"></i>中转</span><span><i class="steam"></i>Steam</span></div><small>点击连线修改线路</small></footer></section>
+<section id="monitor-section" class="panel monitoring" hidden><div class="section-head"><h2>全队监视 <small>3 秒更新</small></h2><label class="switch"><input id="monitor-toggle" type="checkbox" checked><span></span>开启</label></div><div id="monitor-off" hidden>监视已关闭，全队停止额外采样和上报。</div><div id="monitor-cards" class="monitor-grid"></div><p id="monitor-explanation">绿：RTT蓝：游戏读取输入的间隔（暂停时也会增大）</p></section></main>
+<section class="tools panel"><button id="capture">开始抓包</button><button id="open-captures">打开文件夹</button><span id="capture-status">未抓包</span><span id="activity">准备就绪</span></section>
+<section id="log-panel" class="panel" hidden><div class="section-head"><h2>运行日志</h2><button id="close-log">关闭</button></div><pre id="logs"></pre></section>
+</div>
+<dialog id="startup-guide" aria-labelledby="guide-title">
+<h2 id="guide-title">开始联机</h2>
+<div class="network-result"><strong id="ipv6-result">正在检测 IPv6…</strong><p id="ipv6-detail"></p><div class="guide-actions"><button id="network-settings">打开网络设置</button><button id="network-check">重新检测</button></div></div>
+<p>先从 Steam 启动忏悔＋，停在主菜单。所有人使用同一种模式。</p>
+<h3>有服务器码</h3><p>每人填入同一个服务器码和自己的五字母 ID，点击“连接游戏”。将生成的个人连接码发给主持人，由主持人添加队友、点击“自动测试”。全员已接管后，进入官方联机房间。</p>
+<h3>没有服务器码</h3><p>留空服务器码，填写 ID 并连接游戏。每个人添加所有其他队友的个人连接码，再各自点击“启用直连”。双方都有公网 IPv6 时尝试直连，否则使用 Steam 原生；IPv6 不通时，双方可将连线改为 Steam，再启用直连。最后进入官方联机房间。</p>
+<div class="guide-bottom"><label><input id="hide-guide" type="checkbox">以后不再提示</label><button id="guide-done" class="primary">知道了</button></div>
+</dialog>
+<div id="toast" role="status" hidden></div><script src="/app.js"></script></body></html>
