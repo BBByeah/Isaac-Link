@@ -1,0 +1,13 @@
+{
+  "result": "PASS",
+  "from_version": "0.7.0",
+  "skipped_version": "0.7.1",
+  "to_version": "0.7.2",
+  "method": "Actual frozen client UI: check, download, install and restart",
+  "public_github_source": true,
+  "startup_working_directory": "outside installation (compatible launcher)",
+  "profile_preserved": true,
+  "logs_preserved": true,
+  "captures_preserved": true,
+  "backup_version": "0.7.0"
+}
