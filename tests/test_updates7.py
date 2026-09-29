@@ -29,6 +29,14 @@ class Updates(unittest.TestCase):
         data=bytearray(archive.read_bytes());data[-1]^=1;archive.write_bytes(data)
         with self.assertRaises(InvalidSignature):verify_package(archive,m,self.key.public_key())
         with self.assertRaises(InvalidSignature):verified_manifest(path.read_bytes(),Ed25519PrivateKey.generate().public_key())
+
+    def test_next_version_detected_and_same_version_not_offered(self):
+        manager=UpdateManager(self.root)
+        for published,expected in [('0.7.1','available'),('0.7.0','latest'),('0.6.5','latest')]:
+            archive,m,path=self.package(published)
+            with patch('isaac_link.updates.__version__','0.7.0'),patch('isaac_link.updates.public_key',return_value=self.key.public_key()),patch('isaac_link.updates.fetch',return_value=path.read_bytes()):
+                manager.check()
+            self.assertEqual(manager.status,expected)
     def test_archive_traversal_and_missing_files(self):
         archive=self.root/'evil.zip'
         for name in ('../outside','C:/outside','a\\outside','a:stream','/absolute'):

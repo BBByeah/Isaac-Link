@@ -17,6 +17,7 @@ from isaac_link.desktop_backend import DesktopBackend
 from isaac_link.backend import ROOT
 from isaac_link.routing import LABELS, edge
 from isaac_link.stun import DEFAULT_SERVERS
+from isaac_link.version import __version__
 
 THEMES={'green':('#9ac7ac','#121816','#1b2420','#26332c'),'wine':('#c34d4d','#180d0d','#291515','#491b1b'),
         'gold':('#dbbf80','#191710','#272319','#393321'),'purple':('#bea7e2','#17131e','#241e2d','#342a42')}
@@ -130,7 +131,7 @@ class Window(QMainWindow):
         self.pages=QStackedWidget();self.setCentralWidget(self.pages)
         root=QWidget();self.pages.addWidget(root);layout=QVBoxLayout(root);layout.setContentsMargins(24,20,24,16);layout.setSpacing(16)
         header=QHBoxLayout();brand=QLabel('ISAAC-LINK');brand.setObjectName('brand');header.addWidget(brand)
-        badge=QLabel('0.7.0');badge.setObjectName('muted');header.addWidget(badge);header.addStretch()
+        badge=QLabel(__version__);badge.setObjectName('muted');header.addWidget(badge);header.addStretch()
         self.theme=QComboBox()
         for key,label in (('green','墨绿'),('wine','酒红'),('gold','黑金'),('purple','紫色')):self.theme.addItem(label,key)
         self.theme.setCurrentIndex(max(0,self.theme.findData(self.backend.profile.get('theme','green'))));self.theme.currentIndexChanged.connect(self.change_theme)

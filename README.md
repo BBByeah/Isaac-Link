@@ -2,6 +2,8 @@
 
 《以撒的结合：忏悔＋》Windows Steam 版 2～4 人联机助手。
 
+[下载 0.7.0 客户端](https://github.com/BBByeah/Isaac-Link/releases/download/v0.7.0/Isaac-Link-client-v0.7.0.zip) · [下载配套服务器](https://github.com/BBByeah/Isaac-Link/releases/download/v0.7.0/Isaac-Link-server-v0.7.0.zip) · [更新说明](https://github.com/BBByeah/Isaac-Link/releases/tag/v0.7.0)
+
 ## 新版功能
 
 - 原生深色桌面，墨绿、酒红、黑金、紫色四种主题，不再通过浏览器运行。

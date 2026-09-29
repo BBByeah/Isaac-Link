@@ -16,7 +16,7 @@ from isaac_link.version import __version__
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--init-key',action='store_true');parser.add_argument('--key',type=Path,
-        default=Path(os.environ.get('LOCALAPPDATA',Path.home()))/'IsaacLinkPublisher'/'release-ed25519.pem');args=parser.parse_args()
+        default=Path(os.environ.get('LOCALAPPDATA',Path.home()))/'IsaacLinkPublisher'/'release-ed25519.pem');parser.add_argument('--out',type=Path,default=ROOT/'release');args=parser.parse_args()
     key_path=args.key.resolve()
     if key_path.is_relative_to(ROOT):raise SystemExit('The signing key must be outside the repository.')
     if args.init_key:
@@ -29,7 +29,7 @@ def main():
     key=serialization.load_pem_private_key(key_path.read_bytes(),password=None)
     expected=(ROOT/'isaac_link/release_public_key.txt').read_text().strip()
     if key.public_key().public_bytes_raw().hex()!=expected:raise SystemExit('Signing key does not match client trust root.')
-    app=ROOT/'dist/Isaac-Link';out=ROOT/'release';out.mkdir(exist_ok=True)
+    app=ROOT/'dist/Isaac-Link';out=args.out.resolve();out.mkdir(parents=True,exist_ok=True)
     shutil.copy2(ROOT/'dist/updater.exe',app/'updater.exe')
     (app/'.isaac-link-install.json').write_text(json.dumps(dict(product='Isaac-Link',version=__version__)),encoding='utf-8')
     for name in ('README.md','LICENSE'):shutil.copy2(ROOT/name,app/name)
