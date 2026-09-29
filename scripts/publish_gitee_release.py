@@ -23,6 +23,7 @@ def main():
     publisher=Path(os.environ['LOCALAPPDATA'])/'IsaacLinkPublisher'
     p=argparse.ArgumentParser()
     p.add_argument('--folder',type=Path,required=True)
+    p.add_argument('--direct-upload',action='store_true')
     p.add_argument('--token-file',type=Path,default=publisher/'gitee-token.txt')
     args=p.parse_args();folder=args.folder.resolve()
     if not args.token_file.is_file():raise SystemExit('Missing Gitee API token file; no release was changed.')
@@ -55,6 +56,7 @@ def main():
         # Token passed through stdin, never command arguments or printed URLs.
         config='\n'.join(['form = "access_token='+token+'"','form = "file=@'+path.as_posix()+'"'])+'\n'
         command=['curl.exe','--config','-','--silent','--show-error','--fail','--connect-timeout','20','--max-time','600',repo+f'/releases/{rid}/attach_files']
+        if args.direct_upload:command[1:1]=['--noproxy','*']
         result=subprocess.run(command,input=config,text=True,capture_output=True)
         if result.returncode:raise RuntimeError('Gitee upload failed: curl '+str(result.returncode))
         return json.loads(result.stdout)

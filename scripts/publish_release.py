@@ -15,11 +15,12 @@ from isaac_link.version import __version__
 from isaac_link.updates import verified_manifest,verify_package
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--publish',action='store_true');parser.add_argument('--direct-upload',action='store_true');parser.add_argument('--repair-missing',action='store_true');parser.add_argument('--version',default=__version__);parser.add_argument('--folder',type=Path,default=ROOT/'release');parser.add_argument('--test-release',action='store_true');parser.add_argument('--revision',default='');args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('--publish',action='store_true');parser.add_argument('--stage-packages',action='store_true');parser.add_argument('--direct-upload',action='store_true');parser.add_argument('--repair-missing',action='store_true');parser.add_argument('--version',default=__version__);parser.add_argument('--folder',type=Path,default=ROOT/'release');parser.add_argument('--test-release',action='store_true');parser.add_argument('--revision',default='');args=parser.parse_args()
     version=args.version;repo='BBByeah/Isaac-Link';tag='v'+version;folder=args.folder.resolve()
     suffix='-'+args.revision if args.revision else ''
     names=[f'Isaac-Link-client-{tag}{suffix}.zip',f'Isaac-Link-server-{tag}.zip','update.json']
     if args.revision:names.append('start-isaac-link.cmd')
+    if args.stage_packages:names.remove('update.json')
     manifest=verified_manifest((folder/'update.json').read_bytes());verify_package(folder/names[0],manifest)
     if manifest['version']!=version:raise SystemExit('Manifest version mismatch')
     for name in names:
@@ -77,6 +78,8 @@ def main():
     complete={a['name']:a for a in request(api+f"/releases/{release['id']}/assets")}
     if any(name not in complete or complete[name]['state']!='uploaded' or complete[name]['size']!=(folder/name).stat().st_size for name in names):
         raise SystemExit('Assets are not fully uploaded; draft was not published')
+    if args.stage_packages:
+        print('Package assets staged in GitHub draft; signed manifest not published.');return
     if args.revision and f'Isaac-Link-client-{tag}.zip' in complete:
         request(api+f"/releases/assets/{complete[f'Isaac-Link-client-{tag}.zip']['id']}",'DELETE')
     result=request(api+f"/releases/{release['id']}",'PATCH',dict(body=notes,draft=False,prerelease=False,make_latest='true'))
