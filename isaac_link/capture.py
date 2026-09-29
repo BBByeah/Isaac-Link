@@ -12,14 +12,14 @@ import uuid
 
 def describe(raw):
     result={}
-    if raw.startswith(b'I6H2'):return {'packet_type':'registration_heartbeat'}
-    if raw.startswith(b'I6R2') and len(raw)>=60:
+    if raw.startswith((b'I6H2',b'I7H2')):return {'packet_type':'registration_heartbeat'}
+    if raw.startswith((b'I6R2',b'I7R2')) and len(raw)>=60:
         result['relay_wrapper_bytes']=60;raw=raw[60:]
     if raw.startswith(b'I6W2') and len(raw)>=22:
         _,sender,target,route=struct.unpack_from('!4sQQB',raw)
         result.update(sender=str(sender),target=str(target),route=('ipv6','ipv4','relay','steam','lan')[route] if route<5 else 'unknown')
         body=raw[21:-16];kind=body[:1]
-        result['packet_type']={b'?':'probe',b'!':'probe_reply',b'Q':'round_probe',b'A':'round_reply',b'D':'transport'}.get(kind,'unknown')
+        result['packet_type']={b'?':'probe',b'!':'probe_reply',b'Q':'round_probe',b'A':'round_reply',b'D':'transport',b'C':'coordination'}.get(kind,'unknown')
         if kind==b'B' and len(body)>=2 and 1<=body[1]<=4 and len(body)==2+48*body[1]:
             result.update(packet_type='input_bundle',inputs=[
                 dict(sequence=str(struct.unpack_from('!Q',body,2+48*i)[0]),

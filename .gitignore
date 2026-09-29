@@ -29,3 +29,6 @@ ui-validation/
 .pytest_cache/
 .idea/
 .vscode/
+build-test-output.txt
+build-*-output.txt
+*.lnk

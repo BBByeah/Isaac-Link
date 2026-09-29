@@ -30,13 +30,13 @@ class CredentialsTest(unittest.TestCase):
 
     def test_connect_remembers_reuses_and_forgets(self):
         backend = Backend(self.folder)
-        with patch('isaac_link.browser_app.RuntimeV5', return_value=self.runtime()):
+        with patch('isaac_link.backend.RuntimeV5', return_value=self.runtime()):
             backend.action('connect', dict(player_id='WHEAT', server_code=self.code))
         backend = Backend(self.folder)
         self.assertTrue(backend.state()['saved_server'])
         self.assertNotIn(self.code, json.dumps(backend.state()))
         self.assertNotIn(self.code, (self.folder/'profile.json').read_text())
-        with patch('isaac_link.browser_app.RuntimeV5', return_value=self.runtime()) as factory:
+        with patch('isaac_link.backend.RuntimeV5', return_value=self.runtime()) as factory:
             backend.action('connect', dict(player_id='WHEAT', server_code=backend.saved_server_code))
             self.assertEqual(factory.call_args.args[2]['host'], 'example.test')
         backend.credentials.forget()
@@ -48,7 +48,7 @@ class CredentialsTest(unittest.TestCase):
         new_code = encode_server_code(dict(host='replacement.test', port=27668,
             udp_port=27667, sha256='c'*64, access_key='d'*64))
         rt = self.runtime();rt.start.side_effect = RuntimeError('connection failed')
-        with patch('isaac_link.browser_app.RuntimeV5', return_value=rt):
+        with patch('isaac_link.backend.RuntimeV5', return_value=rt):
             with self.assertRaises(RuntimeError):
                 backend.action('connect', dict(player_id='WHEAT', server_code=new_code))
         self.assertEqual(ServerCredential(self.folder).load(), self.code)
@@ -59,7 +59,7 @@ class CredentialsTest(unittest.TestCase):
 
     def test_save_failure_keeps_connection(self):
         backend = Backend(self.folder);rt = self.runtime()
-        with patch('isaac_link.browser_app.RuntimeV5', return_value=rt), patch.object(backend.credentials,'save',side_effect=OSError('failed')):
+        with patch('isaac_link.backend.RuntimeV5', return_value=rt), patch.object(backend.credentials,'save',side_effect=OSError('failed')):
             backend.action('connect', dict(player_id='WHEAT', server_code=self.code))
         self.assertIs(backend.runtime, rt)
         self.assertFalse(backend.saved_server_code)

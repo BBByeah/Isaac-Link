@@ -5,6 +5,7 @@ import hmac
 from pathlib import Path
 from server.coordinator_v5 import CoordinatorV5
 from server.coordinator_server import serve
+from server.coordinator7 import Coordinator7
 
 class PrivateCoordinator(CoordinatorV5):
     def __init__(self,access_key):
@@ -23,4 +24,4 @@ if __name__=='__main__':
     p.add_argument('--port',type=int,default=27668);p.add_argument('--udp-port',type=int,default=27667)
     a=p.parse_args();key=Path(a.access_key_file).read_text().strip()
     if len(key)!=64 or any(c not in '0123456789abcdef' for c in key):raise SystemExit('Invalid access key file')
-    serve(a.cert,a.key,port=a.port,udp_port=a.udp_port,state_factory=lambda:PrivateCoordinator(key))
+    serve(a.cert,a.key,port=a.port,udp_port=a.udp_port,state_factory=lambda:Coordinator7(key))
