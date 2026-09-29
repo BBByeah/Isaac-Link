@@ -1,4 +1,5 @@
 """Block GitHub requests locally; verify actual anonymous Gitee downloads."""
+import argparse
 import json
 from pathlib import Path
 import sys
@@ -14,6 +15,8 @@ from isaac_link.updates import UpdateManager,GITEE_SOURCE
 
 
 def main():
+    parser=argparse.ArgumentParser();parser.add_argument('--direct',action='store_true');args=parser.parse_args()
+    if args.direct:urllib.request.install_opener(urllib.request.build_opener(urllib.request.ProxyHandler({})))
     original=urllib.request.urlopen
     blocked=[]
     def open_url(request,*args,**kwargs):
@@ -33,7 +36,7 @@ def main():
         assert len(blocked)>=2
         result=dict(result='PASS',version=manager.manifest['version'],manifest_source=manager.manifest_source,
                     download_source=manager.download_source,github_requests_blocked=len(blocked),
-                    signature_verified=True,package_bytes=manager.archive.stat().st_size,
+                    signature_verified=True,package_bytes=manager.archive.stat().st_size,network='direct' if args.direct else 'environment proxy settings',
                     method='Production UpdateManager with GitHub requests blocked; real public Gitee responses')
         (output/'gitee-fallback-result.json').write_text(json.dumps(result,indent=2))
         print(json.dumps(result))

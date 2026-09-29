@@ -1,0 +1,11 @@
+{
+  "result": "PASS",
+  "version": "0.7.3",
+  "manifest_source": "https://gitee.com/api/v5/repos/bbbyeah/isaac-link/contents/updates/stable.json?ref=main",
+  "download_source": "https://gitee.com/bbbyeah/isaac-link/releases/download/v0.7.3/Isaac-Link-client-v0.7.3.zip",
+  "github_requests_blocked": 2,
+  "signature_verified": true,
+  "package_bytes": 97583728,
+  "network": "direct",
+  "method": "Production UpdateManager with GitHub requests blocked; real public Gitee responses"
+}

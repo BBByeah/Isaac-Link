@@ -15,3 +15,13 @@
 0.7.2 及以前没有内置 Gitee 检查地址。完全无法访问 GitHub 的旧用户，需要先手动下载一次新版。
 
 本流程在两个站点均上传完毕且回退实测通过前，不应宣称新版本已支持可用的线上镜像。Gitee Release 上传接口见 [Gitee SDK API 文档](https://gitee.com/sdk/gitee5j/blob/main/docs/RepositoriesApi.md)。
+
+## 0.7.3 线上验证（2026-09-29）
+
+- GitHub 和 Gitee Release 均已发布客户端、服务端及签名清单；两处清单内容一致。
+- Gitee 附件经过免登录完整下载，客户端 ZIP 为 97,583,728 字节，Ed25519 验证通过。
+- `python scripts/verify_gitee_fallback.py --direct` 通过：使用生产 UpdateManager，拦截 GitHub 清单和安装包两个请求，实际从 Gitee API 获取清单并下载公开附件，最终状态为 ready，签名有效。直连仅绕过测试环境代理，未模拟 Gitee 响应。
+- 普通环境代理路径也已成功回退获取清单；下载因代理速度缓慢而中止，未计为完整通过。上面的完整结果来自直连测试。
+- 12 项更新自动测试通过，覆盖主源检查失败、签名无效、下载失败、镜像验签、取消和安装目录占用修复。
+
+机器可读结果：[gitee-update-test-result.json](gitee-update-test-result.json)。本次验证范围为更新源回退、完整下载和签名；没有把它等同于真实 Steam 联机验收或另一轮 GUI 覆盖安装测试。
