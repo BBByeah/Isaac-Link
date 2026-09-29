@@ -15,9 +15,11 @@ from isaac_link.version import __version__
 from isaac_link.updates import verified_manifest,verify_package
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--publish',action='store_true');parser.add_argument('--direct-upload',action='store_true');parser.add_argument('--repair-missing',action='store_true');parser.add_argument('--version',default=__version__);parser.add_argument('--folder',type=Path,default=ROOT/'release');parser.add_argument('--test-release',action='store_true');args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('--publish',action='store_true');parser.add_argument('--direct-upload',action='store_true');parser.add_argument('--repair-missing',action='store_true');parser.add_argument('--version',default=__version__);parser.add_argument('--folder',type=Path,default=ROOT/'release');parser.add_argument('--test-release',action='store_true');parser.add_argument('--revision',default='');args=parser.parse_args()
     version=args.version;repo='BBByeah/Isaac-Link';tag='v'+version;folder=args.folder.resolve()
-    names=[f'Isaac-Link-client-{tag}.zip',f'Isaac-Link-server-{tag}.zip','update.json']
+    suffix='-'+args.revision if args.revision else ''
+    names=[f'Isaac-Link-client-{tag}{suffix}.zip',f'Isaac-Link-server-{tag}.zip','update.json']
+    if args.revision:names.append('start-isaac-link.cmd')
     manifest=verified_manifest((folder/'update.json').read_bytes());verify_package(folder/names[0],manifest)
     if manifest['version']!=version:raise SystemExit('Manifest version mismatch')
     for name in names:
@@ -64,7 +66,7 @@ def main():
     for name in names:
         path=folder/name
         if name in existing:
-            if existing[name]['state']!='uploaded':
+            if existing[name]['state']!='uploaded' or (args.revision and name=='update.json'):
                 request(api+f"/releases/assets/{existing[name]['id']}",'DELETE')
             else:
                 if existing[name]['size']!=path.stat().st_size:raise SystemExit('Draft contains mismatched asset: '+name)
@@ -75,6 +77,8 @@ def main():
     complete={a['name']:a for a in request(api+f"/releases/{release['id']}/assets")}
     if any(name not in complete or complete[name]['state']!='uploaded' or complete[name]['size']!=(folder/name).stat().st_size for name in names):
         raise SystemExit('Assets are not fully uploaded; draft was not published')
+    if args.revision and f'Isaac-Link-client-{tag}.zip' in complete:
+        request(api+f"/releases/assets/{complete[f'Isaac-Link-client-{tag}.zip']['id']}",'DELETE')
     result=request(api+f"/releases/{release['id']}",'PATCH',dict(body=notes,draft=False,prerelease=False,make_latest='true'))
     print('Published: '+result['html_url'])
 

@@ -1,8 +1,10 @@
-# Isaac-Link 0.7.0
+# Isaac-Link 0.7.2
 
 《以撒的结合：忏悔＋》Windows Steam 版 2～4 人联机助手。
 
-[下载 0.7.0 客户端](https://github.com/BBByeah/Isaac-Link/releases/download/v0.7.0/Isaac-Link-client-v0.7.0.zip) · [下载配套服务器](https://github.com/BBByeah/Isaac-Link/releases/download/v0.7.0/Isaac-Link-server-v0.7.0.zip) · [更新说明](https://github.com/BBByeah/Isaac-Link/releases/tag/v0.7.0)
+[下载 0.7.2 客户端](https://github.com/BBByeah/Isaac-Link/releases/download/v0.7.2/Isaac-Link-client-v0.7.2.zip) · [下载配套服务器](https://github.com/BBByeah/Isaac-Link/releases/download/v0.7.2/Isaac-Link-server-v0.7.2.zip) · [更新说明](https://github.com/BBByeah/Isaac-Link/releases/tag/v0.7.2) · [Gitee 源码镜像](https://gitee.com/bbbyeah/isaac-link)
+
+0.7.1、0.7.2 为更新链路测试版本，联机功能与 0.7.0 一致。
 
 ## 新版功能
 
@@ -40,7 +42,7 @@
 
 启动检查可以关闭，也可手动检查、忽略本版本或稍后升级。联机中允许下载，安装前必须先断开助手。检查失败不影响使用。
 
-0.6.5 首次迁移需手动下载新版。当前 GitHub 是唯一启用的更新源，Gitee 尚未配置。协议 8 不支持与旧客户端混组。
+0.6.5 首次迁移需手动下载新版。0.7.0 可以直接更新到最新 0.7.2，无需先安装 0.7.1。当前下载更新源为 GitHub；Gitee 同步源码和版本标签，尚未作为客户端下载源。协议 8 不支持与 0.6.x 客户端混组。
 
 更新清单、签名和客户端 ZIP 必须作为 GitHub Release 附件发布；仅推送 Git 源码不会产生应用内更新。清单尚未发布或网络不可达时，程序会提示检查失败，当前版本仍可继续使用。
 

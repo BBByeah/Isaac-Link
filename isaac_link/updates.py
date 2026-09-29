@@ -121,4 +121,4 @@ class UpdateManager:
         updater=stage/'updater.exe';shutil.copy2(root/'updater.exe',updater)
         job=dict(root=str(root),archive=str(self.archive.resolve()),manifest=str((self.folder/'update.json').resolve()),pid=os.getpid())
         job_path=stage/'job.json';job_path.write_text(json.dumps(job),encoding='utf-8')
-        subprocess.Popen([str(updater),'--job',str(job_path)],creationflags=subprocess.CREATE_NO_WINDOW)
+        subprocess.Popen([str(updater),'--job',str(job_path)],cwd=stage,creationflags=subprocess.CREATE_NO_WINDOW)

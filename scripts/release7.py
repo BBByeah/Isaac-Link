@@ -16,7 +16,7 @@ from isaac_link.version import __version__
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--init-key',action='store_true');parser.add_argument('--key',type=Path,
-        default=Path(os.environ.get('LOCALAPPDATA',Path.home()))/'IsaacLinkPublisher'/'release-ed25519.pem');parser.add_argument('--out',type=Path,default=ROOT/'release');args=parser.parse_args()
+        default=Path(os.environ.get('LOCALAPPDATA',Path.home()))/'IsaacLinkPublisher'/'release-ed25519.pem');parser.add_argument('--out',type=Path,default=ROOT/'release');parser.add_argument('--revision',default='');args=parser.parse_args()
     key_path=args.key.resolve()
     if key_path.is_relative_to(ROOT):raise SystemExit('The signing key must be outside the repository.')
     if args.init_key:
@@ -31,13 +31,16 @@ def main():
     if key.public_key().public_bytes_raw().hex()!=expected:raise SystemExit('Signing key does not match client trust root.')
     app=ROOT/'dist/Isaac-Link';out=args.out.resolve();out.mkdir(parents=True,exist_ok=True)
     shutil.copy2(ROOT/'dist/updater.exe',app/'updater.exe')
+    shutil.copy2(ROOT/'scripts/portable_start.cmd',app/'start-isaac-link.cmd')
+    shutil.copy2(ROOT/'scripts/portable_start.cmd',out/'start-isaac-link.cmd')
     (app/'.isaac-link-install.json').write_text(json.dumps(dict(product='Isaac-Link',version=__version__)),encoding='utf-8')
     for name in ('README.md','LICENSE'):shutil.copy2(ROOT/name,app/name)
     shutil.copytree(ROOT/'licenses',app/'licenses',dirs_exist_ok=True)
     (app/'docs').mkdir(exist_ok=True)
     for name in ('V0.7.0.md','server-deployment.md'):shutil.copy2(ROOT/'docs'/name,app/'docs'/name)
     if (ROOT/'docs/images').exists():shutil.copytree(ROOT/'docs/images',app/'docs/images',dirs_exist_ok=True)
-    archive=out/f'Isaac-Link-client-v{__version__}.zip'
+    suffix='-'+args.revision if args.revision else ''
+    archive=out/f'Isaac-Link-client-v{__version__}{suffix}.zip'
     with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED) as z:
         for p in sorted(app.rglob('*')):
             if p.is_file():z.write(p,p.relative_to(app).as_posix())

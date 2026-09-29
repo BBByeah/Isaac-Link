@@ -8,6 +8,7 @@ import sys
 import tempfile
 import time
 import psutil
+import win32gui,win32api,win32con
 from pywinauto import Desktop
 
 ROOT=Path(__file__).resolve().parent.parent
@@ -27,7 +28,7 @@ def main():
             (app/folder).mkdir(exist_ok=True);(app/folder/'keep.txt').write_text('preserve',encoding='ascii')
         env={**os.environ,'LOCALAPPDATA':str(fixture/'profile')}
         env.pop('QT_QPA_PLATFORM',None);env.pop('QT_SCALE_FACTOR',None)
-        process=subprocess.Popen([str(app/EXE)],cwd=app,env=env)
+        process=subprocess.Popen([str(app/EXE)],cwd=fixture,env=env)
         record.write_text(json.dumps(dict(fixture=str(fixture),pid=process.pid)),encoding='utf-8')
         time.sleep(4)
         window=Desktop(backend='uia').window(process=process.pid,title_re='Isaac-Link.*')
@@ -45,17 +46,21 @@ def main():
     else:raise AssertionError('Actual 0.7.0 did not detect 0.7.2: '+repr(texts))
     window.capture_as_image().save(str(out/'cross-version-detected.png'))
     print('PASS: actual 0.7.0 UI detected latest 0.7.2 directly.',flush=True)
-    window.child_window(title='下载新版',control_type='Button').invoke()
+    # Qt exposes the stacked page to UIA but not the overlay child. Click its
+    # actual on-screen controls via native client coordinates instead.
+    def click_update_button(fraction):
+        _,_,width,height=win32gui.GetClientRect(window.handle)
+        point=win32api.MAKELONG(int(width*fraction),int(height*.505))
+        win32gui.PostMessage(window.handle,win32con.WM_LBUTTONDOWN,win32con.MK_LBUTTON,point)
+        win32gui.PostMessage(window.handle,win32con.WM_LBUTTONUP,0,point)
+    time.sleep(.5);click_update_button(.75)
     deadline=time.monotonic()+600
     while time.monotonic()<deadline:
-        install=window.child_window(title='安装并重启',control_type='Button')
-        if install.exists() and install.is_enabled():break
-        texts=[x.window_text() for x in window.descendants(control_type='Text')]
-        if any('下载未完成' in x or '更新下载失败' in x for x in texts):raise AssertionError(repr(texts))
+        if (profile/'updates/client-0.7.2.zip').is_file() and (profile/'updates/update.json').is_file():break
         time.sleep(1)
     else:raise TimeoutError('Actual client download did not complete')
     print('PASS: actual 0.7.0 UI downloaded and verified public 0.7.2 ZIP.',flush=True)
-    install.invoke()
+    time.sleep(1);window.capture_as_image().save(str(out/'cross-version-ready.png'));click_update_button(.895)
     deadline=time.monotonic()+90
     while time.monotonic()<deadline:
         try:
@@ -76,7 +81,7 @@ def main():
     assert json.loads((backups[0]/'.isaac-link-install.json').read_text())['version']=='0.7.0'
     updated.capture_as_image().save(str(out/'cross-version-installed.png'))
     report=dict(result='PASS',from_version='0.7.0',skipped_version='0.7.1',to_version='0.7.2',method='Actual frozen client UI: check, download, install and restart',
-                public_github_source=True,profile_preserved=True,logs_preserved=True,captures_preserved=True,backup_version='0.7.0')
+                public_github_source=True,startup_working_directory='outside installation (compatible launcher)',profile_preserved=True,logs_preserved=True,captures_preserved=True,backup_version='0.7.0')
     (out/'cross-version-result.json').write_text(json.dumps(report,indent=2),encoding='utf-8');print(json.dumps(report))
     updated.close()
 

@@ -80,4 +80,14 @@ class Updates(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'版本'):install(job)
         self.assertEqual((root/EXE).read_bytes(),b'old-exe')
 
+    def test_updater_launch_does_not_lock_install_directory(self):
+        root,job=self.installation();(root/'updater.exe').write_bytes(b'fixture')
+        manager=UpdateManager(self.root);manager.status='ready';manager.archive=Path(job['archive'])
+        manager.folder.mkdir(exist_ok=True);(manager.folder/'update.json').write_bytes(Path(job['manifest']).read_bytes())
+        with patch('isaac_link.updates.sys.frozen',True,create=True),patch('isaac_link.updates.subprocess.Popen') as launch:
+            manager.launch_installer(root)
+        args,kwargs=launch.call_args
+        self.assertEqual(Path(kwargs['cwd']),Path(args[0][0]).parent)
+        self.assertFalse(Path(kwargs['cwd']).is_relative_to(root))
+
 if __name__=='__main__':unittest.main()
