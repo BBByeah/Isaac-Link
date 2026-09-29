@@ -14,7 +14,8 @@ import urllib.request
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from isaac_link.version import __version__
 
-SOURCES=('https://github.com/BBByeah/Isaac-Link/releases/latest/download/update.json',)
+GITEE_SOURCE='https://gitee.com/api/v5/repos/bbbyeah/isaac-link/contents/updates/stable.json?ref=main'
+SOURCES=('https://github.com/BBByeah/Isaac-Link/releases/latest/download/update.json',GITEE_SOURCE)
 MAX_PACKAGE=512*1024*1024
 
 def version(value):
@@ -50,6 +51,18 @@ def fetch(url,limit=131072):
     if len(data)>limit:raise ValueError('下载内容过大')
     return data
 
+def fetch_manifest(source):
+    raw=fetch(source)
+    if source==GITEE_SOURCE:
+        # The Contents API avoids HTML/login responses from raw-file pages.
+        document=json.loads(raw)
+        if document.get('encoding')!='base64':raise ValueError('镜像清单编码无效')
+        content=document['content']
+        if not isinstance(content,str):raise ValueError('镜像清单内容无效')
+        raw=base64.b64decode(''.join(content.split()),validate=True)
+    return raw
+
+
 def verify_package(path,manifest,key=None):
     path=Path(path)
     if path.stat().st_size!=manifest['size']:raise ValueError('更新包不完整')
@@ -59,7 +72,7 @@ class UpdateManager:
     def __init__(self,folder,sources=SOURCES):
         self.folder=Path(folder)/'updates';self.sources=tuple(sources);self.cancel=threading.Event()
         self.status='idle';self.error='';self.manifest=None;self.raw=None;self.progress=0;self.archive=None
-        self.lock=threading.Lock();self.worker=None
+        self.lock=threading.Lock();self.worker=None;self.manifest_source='';self.download_source=''
 
     def start(self,fn):
         with self.lock:
@@ -73,11 +86,13 @@ class UpdateManager:
 
     def check(self):
         self.status='checking'
+        self.manifest=None;self.raw=None;self.archive=None;self.manifest_source=''
         failures=[]
         for source in self.sources:
             try:
-                raw=fetch(source);manifest=verified_manifest(raw)
+                raw=fetch_manifest(source);manifest=verified_manifest(raw)
                 self.raw=raw;self.manifest=manifest
+                self.manifest_source=source
                 self.status='available' if version(manifest['version'])>version(__version__) else 'latest'
                 return
             except Exception as e:failures.append(str(e))
@@ -90,6 +105,7 @@ class UpdateManager:
         partial=target.with_suffix('.partial');failures=[]
         for url in manifest['urls']:
             try:
+                if self.cancel.is_set():raise InterruptedError()
                 self.progress=0
                 with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'Isaac-Link'}),timeout=20) as response,partial.open('wb') as out:
                     https_url(response.url);size=0
@@ -101,8 +117,9 @@ class UpdateManager:
                         if size>manifest['size']:raise ValueError('更新包超过声明大小')
                         out.write(block);self.progress=int(size*100/manifest['size'])
                 verify_package(partial,manifest)
-                partial.replace(target);self.archive=target;self.status='ready'
+                partial.replace(target);self.archive=target;self.download_source=url
                 (self.folder/'update.json').write_bytes(self.raw)
+                self.status='ready'
                 return
             except InterruptedError:raise
             except Exception as e:failures.append(str(e))
